@@ -1,0 +1,18 @@
+{
+  "timezone": "Asia/Shanghai",
+  "research_profile": "Research Profile.md",
+  "daily_directory": "Daily Papers",
+  "template": "Template/Daily Research Radar — YYYY-MM-DD.md",
+  "recommended_database": "Database/recommended.json",
+  "sync_database": "Database/zotero-sync.json",
+  "zotero": {
+    "collection_name": "光谱分析",
+    "collection_key": null,
+    "data_dir": null,
+    "auto_import": false
+  },
+  "downloads": {
+    "main_pdf": true,
+    "include_si": false
+  }
+}

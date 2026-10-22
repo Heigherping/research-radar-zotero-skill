@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+research-radar.local.json
+Research Profile.md
+Daily Papers/
+Database/
+*.pdf
+*.sqlite
+*.sqlite-*
+*.log
+dist/

@@ -1,0 +1,22 @@
+# 配置与授权
+
+复制 `assets/research-radar.example.json` 到**用户项目**的 `research-radar.local.json`，不要把个人配置提交到技能仓库。
+
+| 字段 | 用途 |
+|---|---|
+| `timezone` | 运行日期与检索区间使用的 IANA 时区 |
+| `research_profile` | 每次重新读取的研究画像路径 |
+| `daily_directory` / `template` | Daily 输出目录与现有模板 |
+| `recommended_database` | 仅题录的历史推荐去重记录 |
+| `sync_database` | Zotero 分类、条目与附件核验状态 |
+| `zotero.collection_name` | 用户要求的分类；示例名称可修改 |
+| `zotero.collection_key` | 初次解析并核验后记录的稳定 key |
+| `zotero.data_dir` | 可选，用于本地 API 不可读时只读核验 |
+| `zotero.auto_import` | 是否已有用户授权每日创建条目 |
+| `downloads.main_pdf` / `include_si` | 用户确认的下载范围 |
+
+初次配置核对项目、分类及自动入库授权。若当前请求已经明确授权，不重复确认。示例的 `auto_import: false` 是避免把安装技能当成修改文献库的授权。
+
+解析分类后同时核验文库和名称；同名分类歧义时请用户选择。不要写入示例中的其他用户 key，不把 collectionID 固定为跨设备配置。目标缺失时报告，除非用户也授权创建分类。
+
+`Research Profile.md` 可包含研究问题、近期主题、方法、应用条件、排除项和价值判断。不要替用户编造画像。保留用户模板的 YAML、标题、Dataview 字段、标签和手动判断区；仅在初始化或用户要求修改时编辑模板。
