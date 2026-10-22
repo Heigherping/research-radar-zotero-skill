@@ -1,57 +1,306 @@
 # Research Radar + Zotero
 
-一个面向 Codex 等文件式 skill 宿主的科研论文雷达：读取最新研究画像，生成 Obsidian 每日推荐，按授权同步到指定 Zotero 分类，保存合法可得的正文 PDF，并在笔记末尾提醒缺失项。
+读取最新研究画像，生成 Obsidian 每日论文推荐；按授权将文献保存到指定 Zotero 分类，获取合法可得的正文 PDF，并在日报末尾提醒缺失项。
 
-## 工作流
+研究画像 → 多源检索 → 比较筛选与去重 → 每日分析 → Zotero 指定分类 → 正文附件核验 → Obsidian 阅读与跟进。
 
-研究画像 → 多源检索 → 候选比较与版本去重 → 每日分析 → Zotero 指定分类 → 正文附件核验 → 缺失提醒。
+本仓库是 **agent 工作流 skill**。检索、Zotero 写入和下载由宿主 agent 的可用工具执行；Python 脚本只做只读检查。安装后先完成一次手动运行，再设置定时任务。
 
-- 默认 2 篇高相关 + 1 篇个性化热点，宁缺毋滥。
-- 最近一个月优先，必要时分层扩大，最多三年。
-- 已有条目及附件复用；分类固定，不跟随界面当前选中项。
-- 正式版/接受稿/预印本区分，摘要与全文分析区分。
-- 保留用户模板、历史、阅读状态和手动判断，不自动创建永久论文笔记。
+## 使用导航
 
-## 安装
+1. [准备运行环境](#1-准备运行环境)
+2. [安装 Skill](#2-安装-skill)
+3. [建立 Obsidian 目录](#3-建立-obsidian-目录)
+4. [填写研究画像和配置](#4-填写研究画像和配置)
+5. [首次运行与检查结果](#5-首次运行与检查结果)
+6. [阅读和管理论文](#6-阅读和管理论文)
+7. [设置每日定时任务](#7-设置每日定时任务)
+8. [补做同步与更新配置](#8-补做同步与更新配置)
+9. [常见问题](#9-常见问题)
 
-下载本仓库，将包含 `SKILL.md` 的目录放到 `~/.codex/skills/research-radar-zotero/`，然后在新会话中使用；其他兼容宿主使用其对应 skills 目录。
+## 1. 准备运行环境
 
-需要一个可联网检索和操作本地文件的 agent。Zotero 同步需要运行中的 Zotero Desktop 及可用的写入接口；只读数据库助手使用 Python 3.10+ 标准库，无第三方依赖。PDF 内容核验使用宿主可用的 PDF 解析工具。
+| 组件 | 用途 |
+|---|---|
+| 支持文件式 skill 的 agent，例如 Codex | 读取画像和模板、联网检索、写入 Markdown、执行同步 |
+| Obsidian 本地库 | 查看日报、管理阅读进度和后续决定 |
+| Zotero Desktop | 保存文献及正文附件，打开 `zotero://` 链接 |
+| Zotero 工具或受支持的写入接口 | 新建条目、指定分类和保存附件；只读接口无法完成入库 |
+| Python 3.10+（可选） | 运行仓库内的只读核验脚本，标准库即可 |
+| Dataview（可选） | 展示两个索引看板，普通日报阅读不依赖它 |
 
-本仓库是 **agent 工作流 skill**，不是独立运行的论文爬虫或后台服务。附带脚本只做只读核验；论文检索、写入和下载由 agent 的可用工具执行。仅安装 skill 不会自动修改 Zotero，也不会自动创建定时任务。
+让 agent 能访问项目目录、所需 Zotero 接口与网络来源。采用本地数据库检查时，还需读取用户明确指定的 Zotero 数据目录；PDF 内容核验需要宿主具备 PDF 解析能力。
 
-## 使用
+先在 Zotero 中准备目标分类，例如“我的文库 / 光谱分析”。其他研究方向可换成自己的分类名；同名分类存在多个时，先明确文库及完整路径。
 
-在项目中准备 `Research Profile.md`，优先使用已有 Daily 模板。可参考 `assets/research-radar.example.json` 创建项目自己的 `research-radar.local.json`；确认自动入库授权、目标分类和 SI 偏好后保存配置。
+## 2. 安装 Skill
+
+推荐在 Codex 中发送：
 
 ```text
-使用 $research-radar-zotero，根据当前项目最新的 Research Profile.md 生成今日推荐。
-允许自动创建 Zotero 条目，全部加入我的“光谱分析”分类，只下载正文 PDF，不含 SI。
-把缺失 PDF、分类归入失败或其他同步问题列在 Obsidian 每日页面末尾。
+使用 $skill-installer，从 https://github.com/Heigherping/research-radar-zotero-skill
+安装仓库根目录中的 skill，安装目录名使用 research-radar-zotero。
 ```
+
+也可以下载 [Release 安装包](https://github.com/Heigherping/research-radar-zotero-skill/releases)，将 ZIP 内的 `research-radar-zotero` 文件夹放入当前宿主识别的 skills 目录。安装后应能找到：
 
 ```text
-使用 $research-radar-zotero，仅补做今天页面里尚未完成的 Zotero/PDF 同步，保留我的阅读判断。
+research-radar-zotero/
+├─ SKILL.md
+├─ agents/openai.yaml
+├─ assets/
+├─ references/
+└─ scripts/zotero_inspect.py
 ```
 
-需要定时执行时，明确要求宿主创建 Scheduled Task，并指定时间、时区及项目。机器与所需本地应用须保持可用。
+Codex 的用户级手动安装目录可用 `~/.agents/skills/research-radar-zotero/`；Windows 对应 `%USERPROFILE%\.agents\skills\research-radar-zotero\`。通过内置安装器安装时，以其实际返回路径为准；已在 `~/.codex/skills/` 中正常发现的安装可以继续使用，避免重复安装同名 skill。若更新后未出现，重启 Codex。参见 [OpenAI 官方 Skill 文档](https://learn.chatgpt.com/docs/build-skills)。
 
-## 只读检查
+检查能否选择或调用 `$research-radar-zotero`。安装 skill 本身不会创建定时任务或修改 Zotero。
+
+## 3. 建立 Obsidian 目录
+
+下列结构对应本项目的实际使用方式，路径已去除个人磁盘位置。`Research Radar` 可以是库内文件夹，也可以直接作为独立库的根目录。
+
+```text
+你的 Obsidian 库/
+└─ Research Radar/                         ← agent 打开的项目目录
+   ├─ Research Profile.md                  ← 用户维护的研究画像
+   ├─ research-radar.local.json            ← 本机配置与已确认偏好
+   ├─ Daily Papers/
+   │  └─ YYYY-MM-DD.md                     ← 每天一篇，通常含 3 篇论文
+   ├─ Template/
+   │  └─ Daily Research Radar — YYYY-MM-DD.md
+   ├─ Database/
+   │  ├─ recommended.json                  ← 推荐历史，仅题录，用于去重
+   │  └─ zotero-sync.json                  ← 分类、条目、附件及失败状态
+   ├─ 面板/
+   │  └─ _Daily Papers 索引.md             ← 按“进一步阅读”等决定分类
+   └─ _论文阅读索引.md                      ← 按每篇论文的阅读状态分类
+```
+
+把 [assets/daily-template.md](assets/daily-template.md) 复制为 `Template/Daily Research Radar — YYYY-MM-DD.md`。已有模板则优先保留原模板，再让 agent 补上 Zotero 链接与页末提醒字段。模板文件名中的 `YYYY-MM-DD` 是模板占位名称；实际日报输出为 `Daily Papers/2026-10-22.md` 这样的日期文件。
+
+两个看板是可选项：
+
+| 仓库模板 | Obsidian 中的位置 |
+|---|---|
+| [daily-decisions-index.md](assets/daily-decisions-index.md) | `面板/_Daily Papers 索引.md` |
+| [paper-reading-index.md](assets/paper-reading-index.md) | `_论文阅读索引.md` |
+
+索引使用 DataviewJS，需要安装并启用 Obsidian 的 Dataview 插件及其 JavaScript 查询选项。两个模板顶部都有 `CONFIG`，将 `folder` 改为**相对整个 Obsidian 库根目录**的路径：
+
+- 项目位于库内 `Research Radar/`：用 `Research Radar/Daily Papers`。
+- 项目自身就是库根目录：用 `Daily Papers`。
+- 决定索引还需同步修改 `jsonPath`，例如 `Research Radar/Database/recommended.json`。
+
+日常阅读不需要打开 JSON。首次缺少历史文件时，让 skill 初始化；已有文件保留原内容。仓库不包含用户的画像、日报或运行数据库。
+
+## 4. 填写研究画像和配置
+
+### 研究画像
+
+在项目根目录创建 `Research Profile.md`。写清楚当前问题、已有条件和取舍；研究方向变化时直接更新此文件，每次运行都会重新读取。
+
+```markdown
+# Research Profile
+
+## 当前研究问题
+- 我正在解决什么问题？当前最需要哪些证据？
+
+## 方法与技术
+- 正在使用的方法、希望比较的替代方案、关键检索词。
+
+## 应用与约束
+- 样品或任务、可用仪器与数据、性能指标、工程限制。
+
+## 推荐偏好
+- 希望看到哪些方法改进、评估方案或可迁移思路？
+
+## 排除项
+- 哪些主题虽然关键词相近，但目前不需要？
+```
+
+画像应由用户提供真实内容。不要把示例问题当成研究事实；可先让 agent 整理已有材料，再核对。
+
+### 本机配置
+
+复制 [assets/research-radar.example.json](assets/research-radar.example.json) 到项目根目录，命名为 `research-radar.local.json`：
+
+```json
+{
+  "timezone": "Asia/Shanghai",
+  "research_profile": "Research Profile.md",
+  "daily_directory": "Daily Papers",
+  "template": "Template/Daily Research Radar — YYYY-MM-DD.md",
+  "recommended_database": "Database/recommended.json",
+  "sync_database": "Database/zotero-sync.json",
+  "zotero": {
+    "collection_name": "光谱分析",
+    "collection_key": null,
+    "data_dir": null,
+    "auto_import": false
+  },
+  "downloads": {
+    "main_pdf": true,
+    "include_si": false
+  }
+}
+```
+
+所有相对文件路径都以 **agent 打开的项目目录**为基准，与上面 Dataview 的库根目录基准不同。
+
+- `collection_name`：改为目标分类。让 agent 查询并核验真实文库和 collection key，再保存 `collection_key`；不要复制其他用户的 key 或本机数字 collectionID。
+- `data_dir`：可选的 Zotero 数据目录，来自 Zotero 设置中的真实位置，内含 `zotero.sqlite`。它不是程序安装目录或 Obsidian 附件目录。Windows 路径在 JSON 中可用 `D:/Zotero/data`，或对反斜杠写双重转义。
+- `auto_import`：示例为 `false`。明确授权每日自动保存后，再由 agent 将确认后的偏好记为 `true`。
+- `main_pdf` / `include_si`：示例仅正文、不含 Supporting Information（SI）。首次确定下载范围并保存，后续沿用；需要 SI 的用户可另行选择。
+- `timezone`：用于运行日期和检索时间窗口。09:30 等执行时刻由 Scheduled Task 管理。
+
+完整字段说明见 [references/configuration.md](references/configuration.md)。
+
+## 5. 首次运行与检查结果
+
+在 Codex 中打开 Obsidian 的 `Research Radar` 项目目录，保持 Zotero Desktop 可用，发送以下提示词；分类名按需替换：
+
+```text
+使用 $research-radar-zotero，读取当前项目的 research-radar.local.json、
+最新 Research Profile.md 和现有 Daily 模板，生成今天的论文推荐。
+允许自动创建缺少的 Zotero 条目，并把新建和复用条目都加入
+“我的文库 / 光谱分析”，保留条目原有的其他分类。
+只下载论文正文 PDF，不下载 SI；已有可用正文直接复用。
+首次核验目标分类后，将真实 collection key 和这些已确认偏好保存到本机配置。
+在每篇简介中填写真实 Zotero 条目链接和本地 PDF 链接；
+缺失 PDF、分类归入失败及其他待处理事项写在日报最后。
+保留已有阅读状态、手动文字和复选框，不创建单篇永久笔记。
+```
+
+只想试用推荐、暂时不入 Zotero，可改为“仅生成推荐，不创建条目或下载附件”，并保持 `auto_import: false`。
+
+一次完整运行会：
+
+1. 读取最新画像、模板、推荐历史与同步记录。
+2. 从最近一个月开始检索，相关证据不足时逐级扩展至 3/6/12/24/36 个月。
+3. 比较候选后，默认推荐 2 篇高相关（可含一篇相关扩展）和 1 篇个性化热点；质量不足时少推。
+4. 核验题录与版本关系，按 DOI、arXiv 等去重；明确分析基于摘要还是全文。
+5. 创建当日日报，复用或创建 Zotero 条目，核验其确实属于指定分类。
+6. 复用已有正文，或尝试合法来源的 PDF；核验论文身份及本地子附件后再写入链接。
+7. 更新历史与同步记录，在日报末尾汇总成功、缺失和失败。
+
+首次运行后，检查以下结果：
+
+| 位置 | 应能看到 |
+|---|---|
+| `Daily Papers/YYYY-MM-DD.md` | 题录、分析依据、中文简介、推荐理由、阅读判断区及页末同步结果 |
+| Zotero 指定分类 | 对应文献；复用条目也属于该分类 |
+| Zotero 文献下的附件 | 可在本机打开的正文 PDF；预印本回退有版本标注 |
+| 日报的 Zotero 链接 | 可定位父条目；PDF 链接可打开对应附件 |
+| 日报页末 | 逐篇列出需处理事项；全部完成时明确无需补充 |
+
+“已创建条目”“已归入分类”“已保存正文附件”分别核验。找不到 PDF 时仍保留推荐与条目；只获取到预印本时说明正式版尚未取得。
+
+## 6. 阅读和管理论文
+
+每篇简介都有两个 Zotero 入口：
+
+```markdown
+- **Zotero 文献:** [在 Zotero 中定位](zotero://select/library/items/PARENT_KEY)
+- **Zotero PDF:** [在 Zotero 中打开 PDF](zotero://open-pdf/library/items/ATTACHMENT_KEY)
+```
+
+上例 key 仅用于解释格式，实际运行必须使用已核验的真实 key。父条目与附件使用不同 key；群组库使用对应 group URI。没有本地正文时显示缺失状态，不生成占位链接。
+
+阅读后，在论文自己的 `### Paper N` 区块修改：
+
+```markdown
+- **阅读状态:** reading
+```
+
+可用 `unread`（未读）、`reading`（阅读中）、`done`（已完成）。根目录 `_论文阅读索引.md` 会按**每篇论文**汇总，而不是按整篇日报统计。
+
+`Further Reading Decision` 用于另一种判断：
+
+```markdown
+- [x] 值得进一步阅读
+- [ ] 加入待处理清单
+- [ ] 暂不处理
+- [ ] 需要先查看相关论文 / 补充材料
+- **我的判断 / 下一步：** 先比较其预处理方法与当前基线。
+```
+
+`面板/_Daily Papers 索引.md` 按这些复选框分类；未勾选的归为“未决定”。阅读进度与后续处理决定相互独立。重跑同步会保留你的选择和文字。
+
+看板依赖 `### Paper N`、`- **Title:**`、`- **阅读状态:**` 和复选框文本；修改这些结构时，相应调整看板解析规则。不要把仅扫描页面 frontmatter 的旧 `type: literature` 看板用于统计日报内的单篇论文。
+
+## 7. 设置每日定时任务
+
+确认手动运行及 Zotero 跳转都成功后，在该项目的桌面会话中发送：
+
+```text
+把当前 Research Radar 流程设置为每日 Scheduled Task，
+每天 09:30，时区 Asia/Shanghai，在当前本地项目运行。
+每次调用 $research-radar-zotero，并重新读取 research-radar.local.json、
+最新研究画像、模板和历史；沿用已确认的指定分类、自动入库及仅正文 PDF 偏好。
+同日已有推荐时只补未完成的同步，保留人工判断。
+如果已有同类任务，请更新它，避免重复创建。
+```
+
+09:30 是使用示例，可按需要调整。创建后核对项目、时间、时区与启用状态，并查看首次运行结果。后续修改时间，直接要求更新已有任务。
+
+本流程需要本地 Obsidian 文件和 Zotero，应在可访问它们的本地环境运行；确保电脑开启、桌面宿主应用运行、项目可读写、Zotero 及所需网络可用。网页任务不能直接访问电脑上的文件夹。权限以宿主实际配置为准，定时运行不会自动获得额外权限。参见 [OpenAI 官方 Scheduled Tasks 文档](https://learn.chatgpt.com/docs/automations)。
+
+## 8. 补做同步与更新配置
+
+### 缺失 PDF 或接口恢复后重试
+
+```text
+使用 $research-radar-zotero，仅补做 Daily Papers/YYYY-MM-DD.md 中
+尚未完成的 Zotero 分类归入和正文 PDF 同步，不重新推荐论文。
+先复查现有条目与附件，更新链接、同步记录和页末提醒，
+保留阅读状态、复选框和我的文字。
+```
+
+把日期替换为实际日期。登录、验证码或机构访问需要人工处理时，先自行完成合法访问，再让 agent 继续。重试前会查询现有结果，避免请求超时后重复创建。
+
+### 更换研究方向、模板或分类
+
+- 研究方向：编辑 `Research Profile.md`，下一次运行读取最新内容。
+- 日报布局：编辑项目内 Daily 模板，保留所需链接、阅读判断和提醒区；看板相关字段变化时同时调整索引。
+- 更换分类：说明新文库与分类，让 agent 重新核验并更新配置中的名称和 key。不要只改名称却保留旧 key。
+- 更换设备：安装 skill、迁移 Obsidian 项目，重新确认 Zotero 数据目录、文库、分类与本地附件；数字 collectionID 不能跨设备照搬。
+- 更新 skill：更新安装目录中的公开文件，保留项目中的本机配置、画像、日报和历史；GitHub 更新不会自动同步到每台设备。
+
+## 9. 常见问题
+
+| 现象 | 检查与处理 |
+|---|---|
+| 看不到 skill | 核对安装目录和 `SKILL.md` 层级；检查是否被禁用，必要时重启宿主 |
+| 推荐方向不符 | 更新画像的具体研究问题、约束与排除项，核对项目是否打开正确 |
+| Zotero 有条目，目标分类没有 | 分类归属仍未完成；按页末提醒补做，不再次创建同一文献 |
+| 没有下载 PDF | 查看失败阶段；来源不可用、权限不足或附件保存失败都可能导致缺失 |
+| 只有 arXiv 预印本 | 保存并标注版本，同时提醒正式版缺失 |
+| Zotero 链接打不开 | 确认本机 Zotero 可用、协议可调用、key 真实且属于当前文库；PDF 要有本地附件 |
+| 看板为空或不执行 | 检查 Dataview 与 JavaScript 查询选项、库相对路径和 `### Paper N` 等字段 |
+| 阅读状态数量不对 | 使用按论文区块解析的模板，避免只按日报 frontmatter 统计 |
+| 本地 API 不可读或返回 403 | 核对接口能力；可配置真实数据目录做只读检查，写入仍需可用接口 |
+| 定时任务没产出 | 查看任务状态与日志，确认时间、时区、本地项目、应用运行状态和权限 |
+
+可在 **skill 安装目录或仓库根目录**运行只读诊断：
 
 ```text
 python scripts/zotero_inspect.py status
-python scripts/zotero_inspect.py inspect --data-dir <Zotero数据目录> --collection-name 光谱分析 --doi <论文DOI>
+python scripts/zotero_inspect.py inspect --data-dir <Zotero数据目录> --collection-name <目标分类> --doi <论文DOI>
 ```
 
-脚本读取临时一致快照，不写 Zotero SQLite。题名匹配仅产生候选，需要再核对作者与年份；文件存在和 PDF 文件头正确，也不等于内容已核验。
+将尖括号替换为实际值，含空格路径加引号。脚本读取数据库与 WAL 的临时一致快照，不写原库。题名匹配仅产生候选；文件存在、PDF 文件头正确也不等于论文内容已核验。无法可靠查询时记录“未核验”，不据此认定未收录。
 
-## 验证与隐私
+## 开发验证与隐私
 
 ```text
 python -m unittest discover -s tests -v
 python -m compileall -q scripts
 ```
 
-仓库不包含个人研究画像、文库 ID、历史推荐、登录凭据或论文文件；实际配置和运行产物应留在用户项目。下载仅使用合法可访问来源，未找到就报告，不承诺每篇都有 PDF。
+仓库仅发布通用 skill、模板、配置示例和检查脚本。个人研究画像、实际配置、文库 ID、历史推荐、登录凭据及论文文件留在用户项目，不随公开包发布。目标项目若另外使用 Git，也需自行排除这些运行数据；本仓库的 `.gitignore` 不会自动作用于其他项目。
+
+下载仅使用合法可访问来源；找不到就报告，不承诺每篇都有正文。日常运行不会自动创建单篇永久论文笔记，也不会替用户决定精读或勾选阅读结论。
 
 MIT License。Zotero、Obsidian 与 Codex 为其各自权利人的产品，本项目不是官方插件。
