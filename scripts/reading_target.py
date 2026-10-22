@@ -118,11 +118,12 @@ def load_target(project, day, number):
     if note_root.exists():
         for note in note_root.rglob('*.md'):
             meta = frontmatter(note.read_text(encoding='utf-8-sig'))
-            if meta.get('type') == 'literature' and str(meta.get('template','')).lower()!='true' and str(meta.get('source_date')) == day and str(meta.get('paper_number')) == str(number):
+            if meta.get('type') == 'literature' and str(meta.get('source_date')) == day and str(meta.get('paper_number')) == str(number):
                 existing.append(note)
     if len(existing) > 1:
         raise ValueError('Multiple reading notes match the same daily paper')
-    if existing and normalize_title(frontmatter(existing[0].read_text(encoding='utf-8-sig')).get('title')) != normalize_title(title):
+    existing_meta = frontmatter(existing[0].read_text(encoding='utf-8-sig')) if existing else {}
+    if existing and normalize_title(existing_meta.get('title')) != normalize_title(title):
         raise ValueError('Existing note title differs from this daily paper')
     output = existing[0] if existing else note_root / filename(day, number, title)
     if output.exists() and not existing:
@@ -130,9 +131,12 @@ def load_target(project, day, number):
     prefix = config.get('obsidian_project_path', '').strip('/')
     def vault_path(path):
         return '/'.join(s for s in [prefix, path.relative_to(root).with_suffix('').as_posix()] if s)
+    decision = re.search(r'^\s*-\s*\[([xX ])\][ \t]*进行精读[ \t]*$', metadata, re.M)
+    note_status = 'done' if str(existing_meta.get('template', '')).lower() == 'true' else existing_meta.get('status')
     result = {
         'source_date':day, 'paper_number':number, 'title':title, 'authors':field('Authors'),
-        'published':field('Published'), 'reading_status':field('阅读状态') or 'unread',
+        'published':field('Published'), 'reading_status':note_status or field('阅读状态') or 'unread',
+        'deep_read_requested':decision[1].lower() == 'x' if decision else None,
         'doi':normalize_doi(doi_match[0]) if doi_match else None,
         'arxiv_id':arxiv_match[1] if arxiv_match else None,
         'daily_path':str(daily), 'source_daily':f'[[{vault_path(daily)}#Paper {number}]]',
@@ -186,7 +190,7 @@ def link(project, day, number, note_path):
     if not note.is_relative_to(note_root):
         raise ValueError('Reading note must be inside note_directory')
     meta = frontmatter(note.read_text(encoding='utf-8-sig'))
-    if not (meta.get('type')=='literature' and str(meta.get('template','')).lower()!='true' and str(meta.get('source_date'))==day and str(meta.get('paper_number'))==str(number)
+    if not (meta.get('type')=='literature' and str(meta.get('source_date'))==day and str(meta.get('paper_number'))==str(number)
             and normalize_title(meta.get('title'))==normalize_title(result['title'])):
         raise ValueError('Reading note identity differs from daily paper')
     if note.resolve() != Path(result['note_path']).resolve():

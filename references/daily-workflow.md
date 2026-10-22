@@ -32,6 +32,8 @@ Why Recommended 必须映射到画像里的具体研究问题、方法或设计�
 
 `Daily Papers/YYYY-MM-DD.md` 是唯一新增的论文分析页面，不创建单篇永久笔记。现有用户模板优先。
 
+每篇论文的阅读状态旁保留 `- [ ] 进行精读`，默认未勾选；这是用户的精读意愿，独立于阅读状态及其他处理决定。日报重跑保留用户勾选。阅读索引显示“是否精读”及已选数量，勾选本身不生成精读笔记；用户明确要求精读后才进入对应流程。
+
 历史记录至少包含 `title`, `doi`, `arxiv_id`, `semantic_scholar_id`, `openalex_id`, `source`, `published_date`, `recommend_date`, `recommend_type`, `paper_url`；未知值用 null。保留旧记录，版本别名可附于同一条目。不将完整分析放进 JSON。
 
 若全部检索来源失败，写明当天检索失败，不添加虚构历史。推荐完成但 Zotero 不可用时仍保留 Daily，并在页末列出同步待处理项。

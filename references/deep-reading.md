@@ -24,9 +24,11 @@ python scripts/reading_target.py resolve --project <项目目录> --date 2026-10
 
 ## 笔记、链接与状态
 
-生成到配置的 `note_directory`。模板 YAML 的 `type` 改为 `literature`，`template` 改为 false，填入 `title/source_date/paper_number/source_daily/read_date` 与真实 Zotero key/URI。YAML 字符串用 JSON 双引号转义即可，日期保存 `YYYY-MM-DD` 字符串。填入版本、实际阅读范围、`reading_skill` 及 `analysis_status`。
+生成到配置的 `note_directory`。首次从模板创建时，YAML 的 `type` 改为 `literature`，`template` 改为 false，填入 `title/source_date/paper_number/source_daily/read_date` 与真实 Zotero key/URI。重跑已有笔记保留用户的 `template` 勾选值。YAML 字符串用 JSON 双引号转义即可，日期保存 `YYYY-MM-DD` 字符串。填入版本、实际阅读范围、`reading_skill` 及 `analysis_status`。
 
 初次精读通常用 `status: reading` 表示进入阅读流程；日报已有用户确认的 reading/done 状态时沿用，不降级。只有用户确认已读完才新增 done 判断。`analysis_status: complete` 仅表示 agent 完成已声明范围的笔记，不代表用户完成阅读。重跑更新原笔记并保留用户批注、状态和复选框。
+
+实际笔记（`type: literature`）的 `template` 复选框沿用为用户的已读确认：true 优先显示 done（已读），false 时按 `status` 显示。真正模板通过 `type: literature-template` 排除，不因实际笔记勾选 `template` 而排除它。定位/回链助手同样复用已勾选笔记，返回其有效阅读状态，不另建笔记。
 
 笔记生成并核验后回链日报：
 
@@ -38,6 +40,6 @@ python scripts/reading_target.py link --project <项目目录> --date 2026-10-22
 
 配置中的 `obsidian_project_path` 是相对 Obsidian 库根目录的项目路径；项目就是库根目录时为空。回链和 `source_daily` 使用这个基准，磁盘解析仍以 `--project` 为基准。
 
-`面板/_论文阅读索引.md` 使用 Note 的 `status` 优先于同一日报区块的状态，并显示日报、精读笔记与 Zotero 入口。修改 Note 的 status 后 Dataview 自动重新查询；它不会回写日报或修改文件。没有精读笔记时沿用日报状态。同一来源出现多个笔记会显示冲突提示，不任意选择。
+`面板/_论文阅读索引.md` 按上述有效状态合并 Note 与日报，并显示日报的“进行精读”选择、精读笔记与 Zotero 入口。日报的精读选择独立于阅读进度，勾选只记录意愿，显式精读请求才生成笔记。修改选择或 Note 属性后 Dataview 自动重新查询；它不会回写日报或修改文件。没有精读笔记时沿用日报状态；旧日报无精读选项时，已有真实笔记显示“是”，其余显示“未选择”。同一来源出现多个笔记会显示冲突提示，不任意选择。
 
 完成条件：题名与来源身份一致、分析范围真实、目标笔记存在、Zotero 链接真实或明确缺失、日报回链正确、索引只计一次。当前请求只安装功能/模板时，验证解析和联动，不提前生成某篇论文的正式精读笔记。

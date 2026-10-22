@@ -29,7 +29,11 @@ tags:
 source_date 为推荐日，paper_number 为日报编号；read_date 为本次精读日期。
 status 是用户阅读进度（unread/reading/done），analysis_status 是笔记生成进度
 （draft/source_limited/complete）；生成完毕不自动把用户阅读进度改为 done。
+实际笔记中，用户勾选 template 表示已读，面板优先显示 done；重跑保留该值。
+真正模板由 type: literature-template 排除。
 清除这些说明与未替换占位符；未取得的事实明确写“未报告/未核验”。 -->
+
+> 阅读完成后，可勾选属性中的 `template`，阅读索引会归入“已读”；未勾选时按 `status` 显示。
 
 ## 文献信息与入口
 

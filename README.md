@@ -224,7 +224,7 @@ Codex 的用户级手动安装目录可用 `~/.agents/skills/research-radar-zote
 - **阅读状态:** reading
 ```
 
-可用 `unread`（未读）、`reading`（阅读中）、`done`（已完成）。`面板/_论文阅读索引.md` 会按**每篇论文**汇总；存在精读笔记时优先取 Note 的 `status`，否则取日报的阅读状态。
+可用 `unread`（未读）、`reading`（阅读中）、`done`（已读）。`面板/_论文阅读索引.md` 会按**每篇论文**汇总；存在精读笔记时优先取 Note 的有效状态，否则取日报的阅读状态。精读选择与笔记完成复选框的用法见[第10节](#10-精读某天第几篇论文)。
 
 `Further Reading Decision` 用于另一种判断：
 
@@ -308,7 +308,7 @@ python scripts/zotero_inspect.py inspect --data-dir <Zotero数据目录> --colle
 
 将 [deep-reading-template.md](assets/deep-reading-template.md) 复制到 `Note/精读论文模板.md`，将新版 [paper-reading-index.md](assets/paper-reading-index.md) 放到 `面板/_论文阅读索引.md`。根目录需要快捷入口时，可嵌入 `![[Research Radar/面板/_论文阅读索引]]`；项目就是库根目录时去掉 `Research Radar/`。
 
-模板包含文献与 Zotero 入口、问题与研究路径、方法、公式算例、实验设计、逐图表证据、局限、与研究画像的联系、复现计划及个人批注。模板的 `type: literature-template` 和 `template: true` 保证它不计入阅读统计。
+模板包含文献与 Zotero 入口、问题与研究路径、方法、公式算例、实验设计、逐图表证据、局限、与研究画像的联系、复现计划及个人批注。模板按 `type: literature-template` 排除，不计入阅读统计。
 
 准备好后直接发送：
 
@@ -342,7 +342,9 @@ status: reading
 analysis_status: complete
 ```
 
-`status` 是你的阅读进度：`unread / reading / done`。有精读笔记时，面板优先使用其 status，并把同一日报论文合并为一行；没有精读笔记时沿用日报状态。修改 Note 属性后面板自动更新，不会回写日报。`analysis_status` 记录笔记生成进度，完成生成不等于你已读完。资料不足时标 `source_limited`，保留待补内容。
+日报每篇论文的阅读状态旁有 `- [ ] 进行精读`：勾选为“是”，未勾选为“否”。阅读索引同步显示“是否精读”与已选数量；选中但尚无笔记时显示“待生成”。这是独立的阅读意愿，勾选不会立即生成笔记或改变阅读进度，仍需明确请求精读。旧日报没有该选项时，有真实精读笔记显示“是”，否则显示“未选择”。
+
+`status` 是你的阅读进度：`unread / reading / done`。实际精读笔记（`type: literature`）勾选属性 `template` 后，面板优先归入“已读”；取消勾选后按原 `status` 显示。保留这个现有复选框名以兼容已创建笔记，它不会让真实笔记被当成模板忽略。有笔记时使用其有效状态并把同一日报论文合并为一行；没有笔记时沿用日报状态。修改日报选项或 Note 属性后面板自动更新，不回写文件。`analysis_status` 记录笔记生成进度，完成生成不等于你已读完。资料不足时标 `source_limited`，保留待补内容。
 
 重复请求会更新已有笔记，保留个人批注、状态和复选框。同一日期/编号对应多个笔记、题名不一致或已有回链冲突时会提示核对。每日定时推荐保持原流程，只有明确要求精读时才生成单篇笔记。
 

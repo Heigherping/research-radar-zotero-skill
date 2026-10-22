@@ -7,7 +7,9 @@ const code=source.match(/```dataviewjs\s*([\s\S]*?)```/)[1];
 const daily=['# Daily',...[1,2,3].flatMap(n=>[`### Paper ${n}`,`- **Title:** Sample ${n}`,'- **阅读状态:** unread','- **Zotero 文献:** [item](zotero://select/library/items/PARENT01)','- **Zotero PDF:** [PDF](zotero://open-pdf/library/items/PDFKEY01)']),'## Summary'].join('\n');
 const page={file:{path:'Research Radar/Daily Papers/2026-10-22.md',name:'2026-10-22'}};
 const note=(number,status='reading',file='note.md')=>({type:'literature',source_date:'2026-10-22',paper_number:number,title:`Sample ${number}`,status,file:{path:'Research Radar/Note/'+file,name:file}});
+let scenarios=0;
 async function render(notes,raw=daily) {
+  scenarios++;
   const paragraphs=[],headers=[],tables=[];
   const dv={pages:q=>q.includes('Daily Papers')?[page]:notes,io:{load:async()=>raw},
     paragraph:x=>paragraphs.push(x),header:(level,x)=>headers.push(x),table:(cols,rows)=>tables.push({cols,rows}),
@@ -23,7 +25,7 @@ async function render(notes,raw=daily) {
   assert.equal(r.rows.find(row=>row[0].title==='Sample 2')[2][0].path,'Research Radar/Note/note');
   assert(r.rows[0][3].includes('zotero://select/library/items/'));
   r=await render([note(2,'done')]);
-  assert(r.headers.includes('✅ 已完成（1）'));assert(r.paragraphs[1].includes('33%'));
+  assert(r.headers.includes('✅ 已读（1）'));assert(r.paragraphs[1].includes('33%'));
   r=await render([{type:'literature-template',template:true,file:{path:'template.md'}},note(2,'done')]);
   assert.equal(r.rows.length,3);
   r=await render([note(2),note(2,'done','duplicate.md')]);
@@ -33,5 +35,27 @@ async function render(notes,raw=daily) {
   r=await render([note(2,'unexpected')]);assert(r.headers.includes('⚠️ 待核对（1）'));
   r=await render([], '### Paper 1\n- **Title:**\n- **Zotero 文献:** Missing');assert.equal(r.rows.length,0);
   r=await render([], '```md\n### Paper 8\n- **Title:** Fake\n```\n'+daily);assert.equal(r.rows.length,3);
-  console.log('Reading index: 10 scenarios passed (merge, status changes, template exclusion, conflicts, orphan, empty title, fenced examples)');
+  r=await render([{...note(2),template:true}], '### Paper 2\n- **Title:** Sample 2\n- **阅读状态:** unread');
+  assert.equal(r.rows.length,1);
+  assert(r.headers.includes('✅ 已读（1）'), '勾选实际精读笔记的 template 后应进入已读，实际分组：'+r.headers.join(' / '));
+  r=await render([{...note(2),template:'true'}]);assert(r.headers.includes('✅ 已读（1）'));
+  r=await render([{...note(2),template:false}]);assert(r.headers.includes('📖 阅读中（1）'));
+  r=await render([{...note(2),template:'false'}]);assert(r.headers.includes('📖 阅读中（1）'));
+  r=await render([{...note(2),template:true},{...note(2,'done','duplicate.md'),template:true}]);
+  assert(r.headers.includes('⚠️ 待核对（1）'));
+  r=await render([{...note(2),template:true,title:'Wrong paper'}]);assert(r.headers.includes('⚠️ 待核对（1）'));
+  r=await render([{type:'literature-template',template:true,file:{path:'template.md'}}]);assert.equal(r.rows.length,3);assert(r.headers.includes('📥 未读（3）'));
+  const selected=daily.replace('- **阅读状态:** unread','- **阅读状态:** unread\n- [x] 进行精读');
+  r=await render([],selected);assert.equal(r.rows.find(row=>row[0].title==='Sample 1')[5],'是');
+  assert.equal(r.rows.find(row=>row[0].title==='Sample 1')[2],'待生成');assert(r.headers.includes('📥 未读（3）'));
+  assert(r.paragraphs[0].includes('已选精读 1'));
+  r=await render([],selected.replace('[x] 进行精读','[ ] 进行精读'));
+  assert.equal(r.rows.find(row=>row[0].title==='Sample 1')[5],'否');assert.equal(r.rows.find(row=>row[0].title==='Sample 1')[2],'—');
+  r=await render([],selected.replace('[x] 进行精读','[X] 进行精读'));assert.equal(r.rows.find(row=>row[0].title==='Sample 1')[5],'是');
+  r=await render([],daily);assert(r.rows.every(row=>row[5]==='未选择'));
+  r=await render([note(2)],daily.replace('- **Title:** Sample 2','- **Title:** Sample 2\n- [ ] 进行精读'));
+  assert.equal(r.rows.find(row=>row[0].title==='Sample 2')[5],'否');assert(r.headers.includes('📖 阅读中（1）'));
+  r=await render([], '```md\n- [x] 进行精读\n```\n'+daily);assert(r.rows.every(row=>row[5]==='未选择'));
+  r=await render([note(2,'已读')]);assert(r.headers.includes('✅ 已读（1）'));
+  console.log(`Reading index: ${scenarios} scenarios passed (merge, completion checkbox, selection, template exclusion, conflicts, orphan, fenced examples)`);
 })().catch(e=>{console.error(e);process.exitCode=1;});

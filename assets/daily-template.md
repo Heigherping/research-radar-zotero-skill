@@ -22,6 +22,7 @@ tags:
 ### Paper 1
 
 - **阅读状态:** unread
+- [ ] 进行精读
 - **Recommendation Type:** Highly Relevant / 强相关
 - **Title:**
 - **Zotero 文献:** 待匹配本地条目
@@ -73,6 +74,7 @@ tags:
 ### Paper 2
 
 - **阅读状态:** unread
+- [ ] 进行精读
 - **Recommendation Type:** Highly Relevant / 强相关
 - **Title:**
 - **Zotero 文献:** 待匹配本地条目
@@ -124,6 +126,7 @@ tags:
 ### Paper 3
 
 - **阅读状态:** unread
+- [ ] 进行精读
 - **Recommendation Type:** Trending / 热点
 - **Title:**
 - **Zotero 文献:** 待匹配本地条目

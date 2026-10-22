@@ -24,7 +24,7 @@ description: 生成 Obsidian 每日论文推荐，同步指定 Zotero 分类与�
 - 先检索滚动最近 1 个月，再按 3/6/12/24/36 个月扩展；不要把卷期日期、入库时间或期刊改题当作全新研究。
 - 核验题录、原始来源和版本关系。按 DOI → arXiv → 数据库 ID → 标准化题名去重，预印本与期刊版合并。
 - 标明全文/摘要证据边界，区分论文结论与给用户的研究启发。热点没有量化证据时标为 `Emerging / Trending Candidate` 并解释实际观察。
-- 按用户模板生成 `Daily Papers/YYYY-MM-DD.md`，不创建单篇永久笔记。没有模板时，可在用户授权的初始化步骤复制 [默认模板](assets/daily-template.md)。
+- 按用户模板生成 `Daily Papers/YYYY-MM-DD.md`，每篇保留“进行精读”复选框与用户已有选择，不创建单篇永久笔记。没有模板时，可在用户授权的初始化步骤复制 [默认模板](assets/daily-template.md)。
 
 ## Zotero 与正文 PDF
 

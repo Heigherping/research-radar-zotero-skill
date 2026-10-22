@@ -104,6 +104,30 @@ Keep summary.
         self.assertFalse(rt.link(self.root,'2026-10-22',2,str(note.relative_to(self.root)))['changed'])
         self.assertEqual(self.daily.read_bytes(),after)
 
+    def test_checked_note_is_reused_linked_and_preserved(self):
+        note=self.make_note(template=True)
+        before=note.read_bytes()
+        result=rt.resolve(self.root,'2026-10-22',2)
+        self.assertTrue(result['note_exists'])
+        self.assertEqual(Path(result['note_path']),note)
+        self.assertEqual(result['reading_status'],'done')
+        self.assertTrue(rt.link(self.root,'2026-10-22',2,str(note.relative_to(self.root)))['changed'])
+        self.assertFalse(rt.link(self.root,'2026-10-22',2,str(note.relative_to(self.root)))['changed'])
+        self.assertEqual(note.read_bytes(),before)
+
+    def test_unchecked_note_preserves_its_reading_status(self):
+        self.make_note(template=False,status='reading')
+        self.assertEqual(rt.resolve(self.root,'2026-10-22',2)['reading_status'],'reading')
+
+    def test_deep_read_choice_and_fenced_example(self):
+        self.assertIsNone(rt.resolve(self.root,'2026-10-22',2)['deep_read_requested'])
+        for marker,expected in [('x',True),('X',True),(' ',False)]:
+            with self.subTest(marker=marker):
+                self.daily.write_text(self.text.replace('#### Further Reading Decision',f'- [{marker}] 进行精读\n#### Further Reading Decision'))
+                self.assertIs(rt.resolve(self.root,'2026-10-22',2)['deep_read_requested'],expected)
+        self.daily.write_text(self.text.replace('#### Further Reading Decision','```md\n- [x] 进行精读\n```\n#### Further Reading Decision'))
+        self.assertIsNone(rt.resolve(self.root,'2026-10-22',2)['deep_read_requested'])
+
     def test_identity_conflict_never_overwrites(self):
         note=self.make_note(title='Different research')
         before=self.daily.read_bytes()
