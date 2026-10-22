@@ -9,6 +9,9 @@
 | `daily_directory` / `template` | Daily 输出目录与现有模板 |
 | `recommended_database` | 仅题录的历史推荐去重记录 |
 | `sync_database` | Zotero 分类、条目与附件核验状态 |
+| `note_directory` / `deep_read_template` | 精读笔记目录与模板，默认 `Note` / `Note/精读论文模板.md` |
+| `reading_index` | 阅读面板位置，默认 `面板/_论文阅读索引.md` |
+| `obsidian_project_path` | 相对整个 Obsidian 库的项目路径，库根目录项目填空字符串，用于 Wikilink |
 | `zotero.collection_name` | 用户要求的分类；示例名称可修改 |
 | `zotero.collection_key` | 初次解析并核验后记录的稳定 key |
 | `zotero.data_dir` | 可选，用于本地 API 不可读时只读核验 |

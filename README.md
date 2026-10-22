@@ -4,7 +4,7 @@
 
 研究画像 → 多源检索 → 比较筛选与去重 → 每日分析 → Zotero 指定分类 → 正文附件核验 → Obsidian 阅读与跟进。
 
-本仓库是 **agent 工作流 skill**。检索、Zotero 写入和下载由宿主 agent 的可用工具执行；Python 脚本只做只读检查。安装后先完成一次手动运行，再设置定时任务。
+本仓库是 **agent 工作流 skill**。检索、Zotero 写入和下载由宿主 agent 的可用工具执行；Python 脚本提供只读检查、论文定位及日报回链。用户明确要求精读时，生成独立笔记并联动阅读索引。安装后先完成一次手动运行，再设置定时任务。
 
 ## 使用导航
 
@@ -17,6 +17,7 @@
 7. [设置每日定时任务](#7-设置每日定时任务)
 8. [补做同步与更新配置](#8-补做同步与更新配置)
 9. [常见问题](#9-常见问题)
+10. [精读某天第几篇论文](#10-精读某天第几篇论文)
 
 ## 1. 准备运行环境
 
@@ -73,9 +74,13 @@ Codex 的用户级手动安装目录可用 `~/.agents/skills/research-radar-zote
    ├─ Database/
    │  ├─ recommended.json                  ← 推荐历史，仅题录，用于去重
    │  └─ zotero-sync.json                  ← 分类、条目、附件及失败状态
+   ├─ Note/
+   │  ├─ 精读论文模板.md                    ← 模板，不计入阅读统计
+   │  └─ YYYY-MM-DD-Paper2-论文题名.md      ← 按明确精读请求生成
    ├─ 面板/
-   │  └─ _Daily Papers 索引.md             ← 按“进一步阅读”等决定分类
-   └─ _论文阅读索引.md                      ← 按每篇论文的阅读状态分类
+   │  ├─ _Daily Papers 索引.md             ← 按“进一步阅读”等决定分类
+   │  └─ _论文阅读索引.md                   ← 日报与精读笔记合并的状态看板
+   └─ _论文阅读索引.md                      ← 可选，嵌入面板的快捷入口
 ```
 
 把 [assets/daily-template.md](assets/daily-template.md) 复制为 `Template/Daily Research Radar — YYYY-MM-DD.md`。已有模板则优先保留原模板，再让 agent 补上 Zotero 链接与页末提醒字段。模板文件名中的 `YYYY-MM-DD` 是模板占位名称；实际日报输出为 `Daily Papers/2026-10-22.md` 这样的日期文件。
@@ -85,13 +90,14 @@ Codex 的用户级手动安装目录可用 `~/.agents/skills/research-radar-zote
 | 仓库模板 | Obsidian 中的位置 |
 |---|---|
 | [daily-decisions-index.md](assets/daily-decisions-index.md) | `面板/_Daily Papers 索引.md` |
-| [paper-reading-index.md](assets/paper-reading-index.md) | `_论文阅读索引.md` |
+| [paper-reading-index.md](assets/paper-reading-index.md) | `面板/_论文阅读索引.md` |
 
 索引使用 DataviewJS，需要安装并启用 Obsidian 的 Dataview 插件及其 JavaScript 查询选项。两个模板顶部都有 `CONFIG`，将 `folder` 改为**相对整个 Obsidian 库根目录**的路径：
 
 - 项目位于库内 `Research Radar/`：用 `Research Radar/Daily Papers`。
 - 项目自身就是库根目录：用 `Daily Papers`。
 - 决定索引还需同步修改 `jsonPath`，例如 `Research Radar/Database/recommended.json`。
+- 阅读索引同时修改 `noteFolder`，例如 `Research Radar/Note`。
 
 日常阅读不需要打开 JSON。首次缺少历史文件时，让 skill 初始化；已有文件保留原内容。仓库不包含用户的画像、日报或运行数据库。
 
@@ -134,6 +140,10 @@ Codex 的用户级手动安装目录可用 `~/.agents/skills/research-radar-zote
   "template": "Template/Daily Research Radar — YYYY-MM-DD.md",
   "recommended_database": "Database/recommended.json",
   "sync_database": "Database/zotero-sync.json",
+  "note_directory": "Note",
+  "deep_read_template": "Note/精读论文模板.md",
+  "reading_index": "面板/_论文阅读索引.md",
+  "obsidian_project_path": "Research Radar",
   "zotero": {
     "collection_name": "光谱分析",
     "collection_key": null,
@@ -214,7 +224,7 @@ Codex 的用户级手动安装目录可用 `~/.agents/skills/research-radar-zote
 - **阅读状态:** reading
 ```
 
-可用 `unread`（未读）、`reading`（阅读中）、`done`（已完成）。根目录 `_论文阅读索引.md` 会按**每篇论文**汇总，而不是按整篇日报统计。
+可用 `unread`（未读）、`reading`（阅读中）、`done`（已完成）。`面板/_论文阅读索引.md` 会按**每篇论文**汇总；存在精读笔记时优先取 Note 的 `status`，否则取日报的阅读状态。
 
 `Further Reading Decision` 用于另一种判断：
 
@@ -294,15 +304,67 @@ python scripts/zotero_inspect.py inspect --data-dir <Zotero数据目录> --colle
 
 将尖括号替换为实际值，含空格路径加引号。脚本读取数据库与 WAL 的临时一致快照，不写原库。题名匹配仅产生候选；文件存在、PDF 文件头正确也不等于论文内容已核验。无法可靠查询时记录“未核验”，不据此认定未收录。
 
+## 10. 精读某天第几篇论文
+
+将 [deep-reading-template.md](assets/deep-reading-template.md) 复制到 `Note/精读论文模板.md`，将新版 [paper-reading-index.md](assets/paper-reading-index.md) 放到 `面板/_论文阅读索引.md`。根目录需要快捷入口时，可嵌入 `![[Research Radar/面板/_论文阅读索引]]`；项目就是库根目录时去掉 `Research Radar/`。
+
+模板包含文献与 Zotero 入口、问题与研究路径、方法、公式算例、实验设计、逐图表证据、局限、与研究画像的联系、复现计划及个人批注。模板的 `type: literature-template` 和 `template: true` 保证它不计入阅读统计。
+
+准备好后直接发送：
+
+```text
+精读 2026-10-22 的第 2 篇论文，按我的精读模板生成笔记。
+```
+
+也可说“精读今天第 1 篇”或“讲透昨天的 Paper 3”。Skill 会按配置时区解析相对日期；日期或编号无法唯一确定时再澄清。完整流程见 [deep-reading.md](references/deep-reading.md)。
+
+执行时会：
+
+1. 精确定位 `Daily Papers/日期.md` 的 `### Paper N`，核对题名、DOI/arXiv 与真实 Zotero 条目。
+2. 找到并读取对应本地 PDF；说明正式版/预印本和实际读到的范围。
+3. 普通精读优先调用环境中可用的 `nature-paper-xray`，按其方法理解论文，再填入用户模板；明确要求 Paper Card 或双语阅读时选择相应 skill。未安装增强 skill 时使用内置流程。
+4. 生成 `Note/2026-10-22-Paper2-论文题名.md`。文件名使用推荐日，`read_date` 记录执行日；非法字符替换，过长题名缩短，完整题名保留在属性中。
+5. 在原日报对应论文中加入精读笔记回链；阅读面板同时显示日报、精读笔记及 Zotero 文献/PDF 入口。
+
+`note_directory`、`deep_read_template` 和 `reading_index` 均以项目为路径基准；`obsidian_project_path` 以整个 Obsidian 库为基准，项目位于库根目录时填 `""`。
+
+生成后的关键属性示意：
+
+```yaml
+type: literature
+template: false
+title: "完整论文题名"
+source_date: "2026-10-22"
+paper_number: 2
+source_daily: "[[Research Radar/Daily Papers/2026-10-22#Paper 2]]"
+read_date: "2026-10-22"
+status: reading
+analysis_status: complete
+```
+
+`status` 是你的阅读进度：`unread / reading / done`。有精读笔记时，面板优先使用其 status，并把同一日报论文合并为一行；没有精读笔记时沿用日报状态。修改 Note 属性后面板自动更新，不会回写日报。`analysis_status` 记录笔记生成进度，完成生成不等于你已读完。资料不足时标 `source_limited`，保留待补内容。
+
+重复请求会更新已有笔记，保留个人批注、状态和复选框。同一日期/编号对应多个笔记、题名不一致或已有回链冲突时会提示核对。每日定时推荐保持原流程，只有明确要求精读时才生成单篇笔记。
+
+定位与回链助手（在 skill 安装目录执行）：
+
+```text
+python scripts/reading_target.py resolve --project <项目目录> --date 2026-10-22 --paper 2
+python scripts/reading_target.py link --project <项目目录> --date 2026-10-22 --paper 2 --note "Note/实际笔记文件名.md"
+```
+
+`resolve` 只读，不生成笔记；`link` 仅在真实笔记已经生成、身份核验通过后添加日报回链。论文理解与笔记正文由 agent 执行。
+
 ## 开发验证与隐私
 
 ```text
 python -m unittest discover -s tests -v
+node tests/test_reading_index.cjs
 python -m compileall -q scripts
 ```
 
 仓库仅发布通用 skill、模板、配置示例和检查脚本。个人研究画像、实际配置、文库 ID、历史推荐、登录凭据及论文文件留在用户项目，不随公开包发布。目标项目若另外使用 Git，也需自行排除这些运行数据；本仓库的 `.gitignore` 不会自动作用于其他项目。
 
-下载仅使用合法可访问来源；找不到就报告，不承诺每篇都有正文。日常运行不会自动创建单篇永久论文笔记，也不会替用户决定精读或勾选阅读结论。
+下载仅使用合法可访问来源；找不到就报告，不承诺每篇都有正文。每日推荐不会自动创建单篇笔记；明确精读请求才会生成，也不会替用户勾选阅读结论。
 
 MIT License。Zotero、Obsidian 与 Codex 为其各自权利人的产品，本项目不是官方插件。

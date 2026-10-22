@@ -6,6 +6,7 @@ __pycache__/
 research-radar.local.json
 Research Profile.md
 Daily Papers/
+Note/
 Database/
 *.pdf
 *.sqlite

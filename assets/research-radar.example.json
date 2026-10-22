@@ -5,6 +5,10 @@
   "template": "Template/Daily Research Radar — YYYY-MM-DD.md",
   "recommended_database": "Database/recommended.json",
   "sync_database": "Database/zotero-sync.json",
+  "note_directory": "Note",
+  "deep_read_template": "Note/精读论文模板.md",
+  "reading_index": "面板/_论文阅读索引.md",
+  "obsidian_project_path": "Research Radar",
   "zotero": {
     "collection_name": "光谱分析",
     "collection_key": null,

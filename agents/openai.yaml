@@ -1,4 +1,4 @@
 interface:
   display_name: "Research Radar + Zotero"
-  short_description: "发现相关论文，生成每日笔记，同步 Zotero 条目并核验正文 PDF"
-  default_prompt: "使用 $research-radar-zotero，根据研究画像生成今日推荐，将文献归入指定 Zotero 分类，并在笔记末尾报告缺失 PDF。"
+  short_description: "推荐论文并同步 Zotero；按日期和编号精读论文，生成笔记并联动阅读索引"
+  default_prompt: "使用 $research-radar-zotero 完成当前论文任务：每日推荐与 Zotero 同步，或按指定日期和 Paper 编号生成精读笔记并联动索引。"

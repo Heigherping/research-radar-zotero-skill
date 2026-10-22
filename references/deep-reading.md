@@ -1,0 +1,43 @@
+# 按日期与 Paper 编号精读
+
+## 定位和文件名
+
+用户说“精读 2026-10-22 第 2 篇”时，先解析日期与编号；“今天/昨天”按配置时区换算，省略年份但存在多种匹配时澄清。不要用当前页面顺序或标题相似度代替日报的 `### Paper 2`。只缺日期或编号且无法唯一确定时才询问。
+
+从 skill 目录执行：
+
+```text
+python scripts/reading_target.py resolve --project <项目目录> --date 2026-10-22 --paper 2
+```
+
+助手只读，返回题名、原始 Paper 区块、DOI/arXiv、Zotero 入口、已有精读笔记及建议文件名。已配置本地数据目录时尝试一致快照核验 PDF 路径与父子关系；结果的 `content_verified` 仍为 false，需实际读取 PDF。群组库或其他接口优先使用宿主的 Zotero 工具继续核验。
+
+文件名采用**推荐日期**，例如 `Note/2026-10-22-Paper2-论文题名.md`；精读执行日期另填 `read_date`。Windows 不支持的字符替换为连字符，长标题缩短；YAML `title` 保留完整题名。`source_date + paper_number` 是日报关联身份，DOI/arXiv 用于核验论文身份。多个已有笔记或目标文件身份冲突时先解决歧义，不覆盖。
+
+## 阅读与 Skill 路由
+
+1. 读取最新研究画像和配置指定的精读模板（默认 `Note/精读论文模板.md`）。显式精读请求才授权创建单篇笔记；定时推荐不触发此分支。
+2. 核验日报、同步记录、Zotero 父条目及 PDF 属于同一研究。优先读取可用本地正文；只有预印本时说明版本。没有全文则按既有合法下载偏好补取；仍缺失时生成 `analysis_status: source_limited` 的资料受限笔记，列出待补内容，不声称全文精读完成。
+3. 在当前可用 skills 中选择匹配能力并读取其 `SKILL.md`。普通“精读/讲透”优先 `nature-paper-xray`；明确要求 Paper Card 时用 `nature-paper-card` 并遵守其来源准备和审计流程；双语对照需求才用 `nature-reader`。这些是可选增强，不要求其他用户安装固定路径。缺少时按本节和模板独立完成。
+4. 使用所选 skill 的阅读与证据方法，最终按用户模板交付。若其固定输出结构必须保留，将其完整分析放入同一精读笔记的分析部分，保留本模板的元数据、入口和个人批注区。不要用多个重复笔记代替交付。
+5. 真实读取正文、附录和已提供材料，记录范围。逐图表分析证据；关键公式解释符号、假设和可算完的教学例子。对未知字段写“未报告/未核验”，数值附章节/图表/页码；区分原文主张与迁移建议。额外 SI 沿用已确认偏好，不因调用精读 skill 自动扩大下载范围。
+
+## 笔记、链接与状态
+
+生成到配置的 `note_directory`。模板 YAML 的 `type` 改为 `literature`，`template` 改为 false，填入 `title/source_date/paper_number/source_daily/read_date` 与真实 Zotero key/URI。YAML 字符串用 JSON 双引号转义即可，日期保存 `YYYY-MM-DD` 字符串。填入版本、实际阅读范围、`reading_skill` 及 `analysis_status`。
+
+初次精读通常用 `status: reading` 表示进入阅读流程；日报已有用户确认的 reading/done 状态时沿用，不降级。只有用户确认已读完才新增 done 判断。`analysis_status: complete` 仅表示 agent 完成已声明范围的笔记，不代表用户完成阅读。重跑更新原笔记并保留用户批注、状态和复选框。
+
+笔记生成并核验后回链日报：
+
+```text
+python scripts/reading_target.py link --project <项目目录> --date 2026-10-22 --paper 2 --note "Note/2026-10-22-Paper2-题名.md"
+```
+
+该命令校验笔记身份并仅插入/核对 `- **精读笔记:** [[...]]`，不改日报阅读状态、正文或决定复选框。已有不同链接时停止，不替换人工关联。
+
+配置中的 `obsidian_project_path` 是相对 Obsidian 库根目录的项目路径；项目就是库根目录时为空。回链和 `source_daily` 使用这个基准，磁盘解析仍以 `--project` 为基准。
+
+`面板/_论文阅读索引.md` 使用 Note 的 `status` 优先于同一日报区块的状态，并显示日报、精读笔记与 Zotero 入口。修改 Note 的 status 后 Dataview 自动重新查询；它不会回写日报或修改文件。没有精读笔记时沿用日报状态。同一来源出现多个笔记会显示冲突提示，不任意选择。
+
+完成条件：题名与来源身份一致、分析范围真实、目标笔记存在、Zotero 链接真实或明确缺失、日报回链正确、索引只计一次。当前请求只安装功能/模板时，验证解析和联动，不提前生成某篇论文的正式精读笔记。
