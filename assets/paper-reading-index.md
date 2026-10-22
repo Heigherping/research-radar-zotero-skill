@@ -4,7 +4,7 @@ type: moc
 
 # 📚 论文阅读索引
 
-> 日报每篇论文可勾选“进行精读”，下表同步显示是否精读，勾选仅记录选择。实际精读笔记勾选属性 `template` 后归入“已读”；未勾选时按笔记 `status` 显示，没有笔记则沿用日报状态。真正的模板按 `type: literature-template` 排除。同一来源只计一次，面板不回写日报或笔记。
+> 日报每篇论文可勾选“进行精读”，下表同步显示是否精读，勾选仅记录选择。实际精读笔记勾选属性 `template` 后归入“已读”；未勾选时按笔记 `status` 显示，没有笔记则沿用日报状态。笔记末尾“我的批注与下一步”中的“评论判断”会同步到下表，也兼容旧的“我的判断”。真正的模板按 `type: literature-template` 排除。同一来源只计一次，面板不回写日报或笔记。
 
 ```dataviewjs
 const CONFIG = {
@@ -19,6 +19,25 @@ const canonical = value => aliases[String(Array.isArray(value) ? value[0] : valu
 const normalize = value => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu,"");
 const withoutMd = value => value.replace(/\.md$/i,"");
 const uri = (value, route) => String(value ?? "").match(new RegExp("zotero://"+route+"/(?:library|groups/\\d+)/items/[A-Z0-9]{8}(?![A-Z0-9])"))?.[0];
+const readingComment = raw => {
+  const text=String(raw??"").replace(/^\uFEFF?---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/,"").replace(/<!--[\s\S]*?-->/g,"");
+  let active=false, collecting=false, fence=null, parts=[];
+  for (const line of text.split(/\r?\n/)) {
+    const marker=line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      if (marker && marker[1][0]===fence.char && marker[1].length>=fence.length && !marker[2].trim()) fence=null;
+      continue;
+    }
+    if (marker) {fence={char:marker[1][0],length:marker[1].length};continue;}
+    if (/^#{1,2}\s+/.test(line)) {active=/^##\s+(?:我的批注与下一步|评论判断)\s*$/.test(line);collecting=false;continue;}
+    if (!active) continue;
+    const field=line.match(/^[-*][ \t]+\*\*(?:评论判断|我的判断)[:：]\*\*[ \t]*(.*)$/);
+    if (field) {parts=[field[1]];collecting=true;continue;}
+    if (/^(?:#{1,6}\s+|[-*][ \t]+|\d+[.)][ \t]+)/.test(line)) {collecting=false;continue;}
+    if (collecting) parts.push(line.trim());
+  }
+  return parts.join("\n").trim();
+};
 const papers = new Map();
 for (const page of dv.pages('"'+CONFIG.folder+'"')) {
   const raw = await dv.io.load(page.file.path);
@@ -66,6 +85,8 @@ for (const note of dv.pages('"'+CONFIG.noteFolder+'"')) {
     if (row.deepRead==null) row.deepRead=true;
     row.item=uri(note.zotero_item_url,"select")||row.item;
     row.pdf=uri(note.zotero_pdf_url,"open-pdf")||row.pdf;
+    try {row.comment=readingComment(await dv.io.load(note.file.path));}
+    catch {row.comment="评论读取失败，请打开笔记核对";}
   }
 }
 const rows=[...papers.values()].sort((a,b)=>b.date.localeCompare(a.date)||(a.number??0)-(b.number??0));
@@ -77,13 +98,14 @@ for (const state of states) {
   if (!items.length && state.value==="other") continue;
   dv.header(3,`${state.emoji} ${state.label}（${items.length}）`);
   if (!items.length) {dv.paragraph("（暂无）");continue;}
-  dv.table(["论文","推荐来源","精读笔记","Zotero","说明","是否精读"],items.map(p=>[
+  dv.table(["论文","推荐来源","精读笔记","Zotero","说明","是否精读","评论判断"],items.map(p=>[
     p.daily?dv.sectionLink(p.daily,`Paper ${p.number}`,false,p.title):dv.fileLink(withoutMd(p.notes[0].file.path),false,p.title),
     p.daily?dv.sectionLink(p.daily,`Paper ${p.number}`,false,`${p.date} · Paper ${p.number}`):"—",
     p.notes.length?p.notes.map(n=>dv.fileLink(withoutMd(n.file.path),false,"精读笔记")):(p.deepRead===true?"待生成":"—"),
     [p.item?`[文献](${p.item})`:null,p.pdf?`[PDF](${p.pdf})`:null].filter(Boolean).join(" · ")||"待核验",
     p.conflict||p.recommendation,
     p.deepRead===true?"是":p.deepRead===false?"否":"未选择",
+    p.conflict?"待核对":p.comment||"未填写",
   ]));
 }
 if (!rows.length) dv.paragraph("尚无论文：请检查 CONFIG 中的库相对路径、日报字段及 Note 的 type: literature。");

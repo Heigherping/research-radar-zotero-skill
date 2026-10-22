@@ -8,10 +8,10 @@ const daily=['# Daily',...[1,2,3].flatMap(n=>[`### Paper ${n}`,`- **Title:** Sam
 const page={file:{path:'Research Radar/Daily Papers/2026-10-22.md',name:'2026-10-22'}};
 const note=(number,status='reading',file='note.md')=>({type:'literature',source_date:'2026-10-22',paper_number:number,title:`Sample ${number}`,status,file:{path:'Research Radar/Note/'+file,name:file}});
 let scenarios=0;
-async function render(notes,raw=daily) {
+async function render(notes,raw=daily,bodies={}) {
   scenarios++;
   const paragraphs=[],headers=[],tables=[];
-  const dv={pages:q=>q.includes('Daily Papers')?[page]:notes,io:{load:async()=>raw},
+  const dv={pages:q=>q.includes('Daily Papers')?[page]:notes,io:{load:async file=>file===page.file.path?raw:bodies[file]??''},
     paragraph:x=>paragraphs.push(x),header:(level,x)=>headers.push(x),table:(cols,rows)=>tables.push({cols,rows}),
     sectionLink:(p,s,e,t)=>({path:p,section:s,title:t}),fileLink:(p,e,t)=>({path:p,title:t})};
   await new AsyncFunction('dv',code)(dv);
@@ -57,5 +57,23 @@ async function render(notes,raw=daily) {
   assert.equal(r.rows.find(row=>row[0].title==='Sample 2')[5],'否');assert(r.headers.includes('📖 阅读中（1）'));
   r=await render([], '```md\n- [x] 进行精读\n```\n'+daily);assert(r.rows.every(row=>row[5]==='未选择'));
   r=await render([note(2,'已读')]);assert(r.headers.includes('✅ 已读（1）'));
+  const notePath=note(2).file.path;
+  const comments=body=>({[notePath]:body});
+  const commentRow=r=>r.rows.find(row=>row[0].title==='Sample 2')[6];
+  r=await render([note(2)],daily,comments('## 我的批注与下一步\n- **评论判断：** 对当前实验有帮助\n- **下一步：** 不应出现在评论里'));
+  assert.equal(commentRow(r),'对当前实验有帮助');assert(r.headers.includes('📖 阅读中（1）'));
+  r=await render([note(2)],daily,comments('## 我的批注与下一步\n- **我的判断：**旧笔记的判断\n- **下一步：**'));
+  assert.equal(commentRow(r),'旧笔记的判断');
+  r=await render([note(2)],daily,comments('## 我的批注与下一步\n- **评论判断：** 第一行\n第二行\n\n第三行\n- **下一步：** 复现'));
+  assert.equal(commentRow(r),'第一行\n第二行\n\n第三行');
+  r=await render([note(2)],daily,comments('## 我的批注与下一步\n- **评论判断：**\n<!-- 示例：自动填写也不应显示 -->\n- **下一步：**'));
+  assert.equal(commentRow(r),'未填写');
+  r=await render([note(2)],daily,comments('## 方法\n- **评论判断：** 不属于个人评论\n## 我的批注与下一步\n```md\n- **评论判断：** 示例不能当真\n```\n- **评论判断：** 真正判断\n## 其他\n不要附加到判断'));
+  assert.equal(commentRow(r),'真正判断');
+  r=await render([note(2)],daily,comments('---\ncomment: 不该读取的元数据\n---\n## 我的批注与下一步\n- **评论判断:** 可以参考 | 仍须验证\n- **下一步：**'));
+  assert.equal(commentRow(r),'可以参考 | 仍须验证');
+  r=await render([note(2),note(2,'done','duplicate.md')],daily,comments('## 我的批注与下一步\n- **评论判断：** 不能任取这条'));
+  assert.equal(commentRow(r),'待核对');
+  r=await render([],daily);assert(r.rows.every(row=>row[6]==='未填写'));
   console.log(`Reading index: ${scenarios} scenarios passed (merge, completion checkbox, selection, template exclusion, conflicts, orphan, fenced examples)`);
 })().catch(e=>{console.error(e);process.exitCode=1;});
